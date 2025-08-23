@@ -1,0 +1,3 @@
+conda create -n assignment1 python
+conda activate assignment1
+pip install numpy matplotlib Pillow
