@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
+import cv2
 
 # implementation of histogram equalization
 def histogram_equalization(img_np):
@@ -20,7 +20,7 @@ def histogram_equalization(img_np):
     # 4. map pixels
     img_equalized = cdf_normalized[img_np]
     
-    return img_equalized, hist, cdf_normalized
+    return img_equalized
 
 
 input_dir = f"input"
@@ -35,14 +35,25 @@ for filename in os.listdir(input_dir):
         save_path_pdf = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_result.pdf")
         if os.path.exists(save_path_png) and os.path.exists(save_path_pdf):
             continue
-        # read a grayscale image
-        img = Image.open(filepath).convert("L")
-        print(f"reading image: {filename}, size: {img.size}")
-        # convert to numpy.ndarray for for easier processing later 
-        img_np = np.array(img)
+        # read image
+        img = cv2.imread(filepath)
+        print(f"reading image: {filename}, size: {img.shape}")
         # histogram equalization
-        equalized_img_np, hist, cdf_norm = histogram_equalization(img_np)
-        # equalized_img = Image.fromarray(equalized_img_np)
+        # if color image
+        if len(img.shape) == 3 and img.shape[2] == 3:
+            # convert to YCrCb
+            ycrcb = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+            # luminance, chrominance-red, chrominance-blue
+            y, cr, cb = cv2.split(ycrcb)
+            # equalize the luminance channel
+            y_eq = histogram_equalization(y)
+            # merge channels
+            ycrcb_eq = cv2.merge([y_eq, cr, cb])
+            # convert back to BGR
+            equalized_img_np = cv2.cvtColor(ycrcb_eq, cv2.COLOR_YCrCb2BGR)
+        # if grayscale image
+        elif len(img.shape) == 2:
+            equalized_img_np = histogram_equalization(img)
 
         # visualization
         plt.figure(figsize=(8,6))
@@ -62,3 +73,4 @@ for filename in os.listdir(input_dir):
         plt.savefig(save_path_png)
         plt.savefig(save_path_pdf, format='pdf')
         # plt.savefig("sample1_result.pdf", format='pdf', bbox_inches='tight', pad_inches=0)
+        plt.close()
