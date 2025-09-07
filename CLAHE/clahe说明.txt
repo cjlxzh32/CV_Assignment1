@@ -1,0 +1,4 @@
+Method: Convert RGB images to LAB space and enhance the brightness channel L. Divide the image into grids and perform histogram equalization on each small tile. Clip the histogram to avoid excessive enhancement.
+
+This approach will result in block artifacts, as each tile is independently balanced. However, the histogram equalization results of different tiles may vary greatly, leading to brightness jumps between adjacent tiles. When finally pieced back into the entire image, a noticeable "grid like" effect appeared. 
+The idea of modification is to first calculate the histogram and mapping LUT for each tile. For each pixel, perform bilinear interpolation based on the mapping results of its tile and the surrounding four tiles to obtain a smooth value. This alleviates the "grid like feeling" in the generated image.
