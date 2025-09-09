@@ -1,0 +1,18 @@
+参考 An improved image enhancement algorithm: Radial contrast-limited adaptive histogram equalization 做径向clahe
+1.radial_clahe.py
+用于对单通道图像（亮度通道）在笛卡尔坐标下做径向分块 CLAHE，并在环之间做平滑过渡
+但仍然出现环形
+2.radial_clahe_local.py
+用于对单通道图像（亮度通道）做软径向 CLAHE，与之前“笛卡尔径向 CLAHE”不同之处在于它使用了像素级加权平均，更平滑
+单发现仍然出现环形
+3.radial_clahe_global.py
+构建全局 Gaussian 权重矩阵
+基本消除环形
+4.radial_clahe_color.py
+对色彩也做了增强
+
+参考 Medical X-Ray Image Enhancement Using Global Contrast-Limited Adaptive Histogram Equalization 结合全局 HE 与 CLAHE 兼顾局部与全局对比度，保持图像亮度整体特性
+5.G_clahe.py
+对亮度通道进行径向 Soft CLAHE + 全局 HE 融合
+6.G_clahe_color.py
+对色彩也做了增强
