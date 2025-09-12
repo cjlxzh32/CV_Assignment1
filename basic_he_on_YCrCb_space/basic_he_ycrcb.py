@@ -23,17 +23,18 @@ def histogram_equalization(img_np):
     return img_equalized
 
 
-input_dir = f"input"
-output_dir = f"output"
+input_dir = f"./input"
+output_dir = f"./basic_he_on_YCrCb_space/output"
 os.makedirs(output_dir, exist_ok=True)
 # traverse all images in the directory
 for filename in os.listdir(input_dir):
     if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff')):
         filepath = os.path.join(input_dir, filename)
         parts = os.path.splitext(filename)[0]
-        save_path_png = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_result.png")
+        save_path_result = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_result.png")
+        save_path_combine = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_combine.png")
         save_path_pdf = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_result.pdf")
-        if os.path.exists(save_path_png) and os.path.exists(save_path_pdf):
+        if os.path.exists(save_path_combine) and os.path.exists(save_path_pdf):
             continue
         # read image
         img = cv2.imread(filepath)
@@ -56,21 +57,29 @@ for filename in os.listdir(input_dir):
             equalized_img_np = histogram_equalization(img)
 
         # visualization
+        # only result
         plt.figure(figsize=(8,6))
-
+        plt.imshow(equalized_img_np)
+        plt.title("Equalized Image")
+        plt.axis("off")   # 去掉坐标轴
+        plt.savefig(save_path_result)
+        plt.close()
+        
+        # combine result with origin
+        plt.figure(figsize=(8,6))
         plt.subplot(1,2,1)
         plt.title("Original Image")
-        plt.imshow(img, cmap='gray')
+        plt.imshow(img)
         plt.axis("off")
 
         plt.subplot(1,2,2)
         plt.title("Equalized Image")
-        plt.imshow(equalized_img_np, cmap='gray')
+        plt.imshow(equalized_img_np)
         plt.axis("off")
 
         # plt.show()
         # save as png and PDF
-        plt.savefig(save_path_png)
-        plt.savefig(save_path_pdf, format='pdf')
+        plt.savefig(save_path_combine)
+        # plt.savefig(save_path_pdf, format='pdf')
         # plt.savefig("sample1_result.pdf", format='pdf', bbox_inches='tight', pad_inches=0)
         plt.close()
