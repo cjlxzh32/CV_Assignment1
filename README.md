@@ -6,4 +6,4 @@ Assignment 2 WBS
 4. Leslie: [REPORT] Discuss what affects the disparity map computation, and any possible improvements of your developed algorithm
 5. Twilight: [CODE+REPORT] Implement and verify the improvement ideas over the provided test images. (+ report: record and discuss improvement results)
 
-6. Project WBS
+Project WBS
