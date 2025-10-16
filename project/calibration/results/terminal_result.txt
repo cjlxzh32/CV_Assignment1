@@ -1,0 +1,23 @@
+[INFO] 找到 60 張影像
+[INFO] 成功偵測角點的影像數：60
+[INFO] 開始 calibrateCamera() ...
+
+=== 標定結果 ===
+RMS 重投影誤差 (ret): 2.061484089316609
+內參矩陣 K:
+ [[3.18383302e+03 0.00000000e+00 1.10081425e+03]
+ [0.00000000e+00 3.18359227e+03 1.92768778e+03]
+ [0.00000000e+00 0.00000000e+00 1.00000000e+00]]
+畸變係數 dist (k1,k2,p1,p2[,k3[,k4,k5,k6]]):
+ [ 1.98670622e-01 -8.95850012e-01  2.06673513e-03  1.28959761e-03
+  1.61289439e+00]
+平均重投影RMSE（每點）: 2.061483470131026
+
+[INFO] 已儲存到 results/iphone_calibration.npz
+[INFO] 已輸出範例去畸變影像：results/undistort_sample.jpg
+
+Key Results:
+RMS Reprojection Error: 2.06 pixels (reasonable for camera calibration)
+Average RMSE per point: 2.06 pixels
+Camera Matrix (K):
+Distortion Coefficients: [0.199, -0.896, 0.002, 0.001, 1.613]
