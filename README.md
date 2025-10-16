@@ -17,7 +17,7 @@ Report: https://www.overleaf.com/project/68ef5c17c9dd098fc84178b4
 A: Elena
 B: Sun Qingmo
 C: Leslie
-D: Lin Zhuming
+D: Lian Zhuming
 E: Twilight
 
 
