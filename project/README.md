@@ -86,12 +86,6 @@ cd project/feature_extraction
 python3 extract_features_batch.py
 ```
 
-**Single Folder Processing:**
-```bash
-cd project/feature_extraction
-python3 extract_features.py
-```
-
 ## 📊 Technical Details
 
 ### Camera Specifications
