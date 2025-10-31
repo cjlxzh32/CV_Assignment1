@@ -59,6 +59,11 @@ colmap stereo_fusion \
     --workspace_path result/arch/dense_model \
     --workspace_format COLMAP \
     --input_type geometric \
+    --StereoFusion.max_reproj_error 4 \
+    --StereoFusion.max_depth_error 0.02 \
+    --StereoFusion.min_num_pixels 3 \
+    --StereoFusion.max_normal_error 30 \
+    --StereoFusion.check_num_images 30 \
     --output_path result/arch/dense_model/dense.ply
 最后得到result/arch/dense_model/dense.ply最终稠密点云
 python post_clean_dense.py得到干净点云
