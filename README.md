@@ -1,6 +1,6 @@
 # Assignment 2 WBS
 
-Report: [](https://www.overleaf.com/1123636637vktjypggvcmr#872ab1)
+Report: [https://www.overleaf.com/1123636637vktjypggvcmr#872ab1](https://www.overleaf.com/1123636637vktjypggvcmr#872ab1)
 
 1. Liu Zhuming: [REPORT] Describe the procedure of disparity computing given a pair of rectified images of the same scene captured from two different viewpoints.
 2. Elena: [CODE] Write a computer algorithm that computes the disparity of two images. + Apply your developed algorithm to the two provided image pairs and derive the corresponding disparity maps.
@@ -10,7 +10,7 @@ Report: [](https://www.overleaf.com/1123636637vktjypggvcmr#872ab1)
 
 Project
 
-Report: [](https://www.overleaf.com/project/68ef5c17c9dd098fc84178b4)
+Report: [https://www.overleaf.com/project/68ef5c17c9dd098fc84178b4](https://www.overleaf.com/project/68ef5c17c9dd098fc84178b4)
 
 [cv_project_wbs_ver1 (1).pdf](https://github.com/user-attachments/files/22922475/cv_project_wbs_ver1.1.pdf)
 
