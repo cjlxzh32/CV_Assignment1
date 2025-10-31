@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/msai/haorong001/CV_Assignment1/project/3D_Reconstruction_Pipeline/ceres_ba/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
