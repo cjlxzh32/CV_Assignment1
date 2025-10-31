@@ -1,105 +1,64 @@
-# Computer Vision Project - 3D Scene Reconstruction
+# 3D_Reconstruction_Pipeline
 
-This project implements a complete computer vision pipeline for 3D scene reconstruction using Structure from Motion (SfM) techniques.
+# step 1 稀疏点云重建
+python run_stage1_sparse.py
+得到结果在result/arch/initial里
+poses_initial.json是全局相机位姿
+sparse_metrics.csv是每对图像的匹配质量统计
+sparse_points_initial.ply是稀疏点云
 
-## 📁 Project Structure
+# step 2 采用Ceres做高质量全局BA优化（这一部分是下载开源Ceres，代码没有上传GitHub）
+python export_to_ceres.py
+得到结果在result/arch里，把稀疏重建问题整理成标准 BA 格式：相机、3D点、观测的整体图
+ba_problem_export.json
+ba_problem_export.npz
 
-```
-project/
-├── calibration/                    # Camera calibration
-│   ├── calibrate_camera.py        # Camera calibration script
-│   ├── frames/                    # Extracted calibration frames
-│   └── results/
-│       ├── iphone_calibration.npz # Camera calibration parameters
-│       └── undistort_sample.jpg   # Undistortion example
-├── scenes/                        # Scene data
-│   └── images/                   # Extracted frames
-│       ├── arch/                 # 126 frames (2fps)
-│       ├── chinese_heritage_centre/ # 154 frames (2fps)
-│       ├── pavilion/             # 193 frames (2fps)
-└── feature_extraction/            # Feature extraction
-    ├── extract_features_batch.py # Batch processing script
-    └── features/                 # Extracted features
-        ├── arch/                 # 252 feature files (126 keypoints + 126 descriptors)
-        ├── chinese_heritage_centre/ # 308 feature files (154 keypoints + 154 descriptors)
-        └── pavilion/            # 386 feature files (193 keypoints + 193 descriptors)
-```
+下一阶段是在 C++ 里完成的，需要先编译 ceres_ba_runner。编译过程已经完成并通过（自建无-SuiteSparse版本的 Ceres）
+cd 3D_Reconstruction_Pipeline/ceres_ba/build
 
-## 🎯 Scenes Captured
+./ceres_ba_runner \
+    --input ../../result/arch/ba_problem_export.json \
+    --output ../../result/arch/ba_problem_ceres_refined.json \
+    --fix_first_camera 1 \
+    --huber_delta 3.0
+优化完成后输出到result/arch/ba_problem_ceres_refined.json
+cameras_optimized: 全局一致的最终相机位姿 
+points_optimized: 全局一致、降噪后的稀疏点云
+notes: BA 优化信息
 
-### 1. Arch Scene
-- **Frames**: `scenes/images/arch/` (126 images at 2fps)
-- **Features**: `feature_extraction/features/arch/`
+# step 3 密集点云重建
+cd 3D_Reconstruction_Pipeline
+python export_refined_to_colmap.py
+得到result/arch/colmap_model_refined/
+    cameras.txt
+    images.txt
+    points3D.txt
 
-<img src="scenes/images/arch/frame_050.jpg" alt="Arch Scene Sample" width="500">
+# 1. undistort
+colmap image_undistorter \
+    --image_path ../scenes/images/arch \
+    --input_path result/arch/colmap_model_refined \
+    --output_path result/arch/dense_model \
+    --output_type COLMAP \
+    --max_image_size 2000
 
-### 2. Chinese Heritage Centre Scene
-- **Frames**: `scenes/images/chinese_heritage_centre/` (154 images at 2fps)
-- **Features**: `feature_extraction/features/chinese_heritage_centre/`
+# 2. PatchMatch stereo
+sbatch colmap_dense_job.sh
+cat logs/error_pmstereo_*.err
+squeue -u haorong001
+colmap patch_match_stereo \
+    --workspace_path result/arch/dense_model \
+    --workspace_format COLMAP \
+    --PatchMatchStereo.max_image_size 2000 \
+    --PatchMatchStereo.geom_consistency true
 
-<img src="scenes/images/chinese_heritage_centre/frame_050.jpg" alt="Chinese Heritage Centre Scene Sample" width="500">
-
-### 3. Pavilion Scene
-- **Frames**: `scenes/images/pavilion/` (193 images at 2fps)
-- **Features**: `feature_extraction/features/pavilion/`
-
-<img src="scenes/images/pavilion/frame_050.jpg" alt="Pavilion Scene Sample" width="500">
-
-## 📷 Camera Calibration
-
-**Calibration File**: `calibration/results/iphone_calibration.npz`
-
-This file contains:
-- **Camera Matrix (K)**: Intrinsic parameters (focal length, principal point)
-- **Distortion Coefficients**: Lens distortion correction parameters
-- **Image Size**: Original image dimensions
-
-**Usage**: The calibration is automatically applied during feature extraction and 3D reconstruction for undistorted, accurate results.
-
-## 🔧 Feature Extraction
-
-### SIFT Features
-- **Detector**: SIFT (Scale-Invariant Feature Transform)
-- **Descriptor**: 128-dimensional feature vectors
-- **Undistortion**: Applied using camera calibration
-- **Output Format**: 
-  - `*_keypoints.npy`: Keypoint coordinates, scale, angle, response, octave, class_id
-  - `*_descriptors.npy`: 128-dimensional SIFT descriptors
-  - `feature_summary.csv`: Statistics for each image
-  - `viz/`: Visualization images with keypoints drawn
-
-### Feature Statistics
-| Scene | Images | Keypoints | Descriptors | Total Files |
-|-------|--------|-----------|-------------|-------------|
-| Arch | 126 | 126 | 126 | 252 |
-| Chinese Heritage Centre | 154 | 154 | 154 | 308 |
-| Pavilion | 193 | 193 | 193 | 386 |
-| **Total** | **473** | **473** | **473** | **946** |
-
-## 🚀 Usage Instructions
-
-### Feature Extraction
-
-**Batch Processing (All Scenes):**
-```bash
-cd project/feature_extraction
-python3 extract_features_batch.py
-```
-
-## 📊 Technical Details
-
-### Camera Specifications
-- **Device**: iPhone 12
-- **Resolution**: 3840×2160 (4K)
-- **Frame Rate**: 30fps (extracted at 2fps)
-- **Format**: HEVC (H.265)
-
-### Processing Pipeline
-1. **Camera Calibration**: Compute intrinsic parameters and distortion coefficients
-2. **Feature Extraction**: Detect and describe SIFT features with undistortion
-
-## 📈 Results Summary
-
-✅ **Successfully processed 3 complete scenes**
-✅ **Extracted 946 feature files across all scenes**
-✅ **Generated camera calibration for undistorted processing**
+# 3. depth fusion
+sbatch colmap_fusion_job.sh
+cat logs/error_stereo_fusion_*.err
+colmap stereo_fusion \
+    --workspace_path result/arch/dense_model \
+    --workspace_format COLMAP \
+    --input_type geometric \
+    --output_path result/arch/dense_model/dense.ply
+最后得到result/arch/dense_model/dense.ply最终稠密点云
+python post_clean_dense.py得到干净点云
