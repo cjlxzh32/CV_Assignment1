@@ -86,6 +86,20 @@ def save_tracks_initial(tracks_points: dict, out_dir: Path):
         json.dump(js, f, indent=2)
     print(f"[OK] wrote {out_dir/'tracks_initial.json'}  (Stage-1 3D + tracks)")
 
+def save_observations_only(tracks_points: dict, out_dir: Path):
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    observations = []
+    for pid, data in tracks_points.items():
+        for (img, uv) in data["obs"]:
+            observations.append({
+                "pt_id": int(pid),
+                "cam": img,
+                "uv": [float(uv[0]), float(uv[1])]
+            })
+    with open(out_dir / "observations.json", "w") as f:
+        json.dump(observations, f, indent=2)
+    print(f"[OK] wrote {out_dir/'observations.json'}  (obs={len(observations)})")
 
 def reconstruct_sparse_scene(
     K: np.ndarray,
@@ -247,5 +261,6 @@ def reconstruct_sparse_scene(
         writer.writeheader()
         writer.writerows(metrics_rows)
     print(f"[OK] wrote {metrics_csv}")
+
 
     return tracks_points, np.asarray(pcd_ds.points), metrics_rows
