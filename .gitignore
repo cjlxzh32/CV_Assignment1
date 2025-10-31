@@ -5,3 +5,5 @@
 test/*
 
 feature_extraction/features/*
+
+.vscode/
