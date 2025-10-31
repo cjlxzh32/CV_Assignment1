@@ -1,9 +1,15 @@
 from load_inputs import load_summary_pairs
 from poses_global import accumulate_global_poses
-from sparse_reconstruction import reconstruct_sparse_scene, save_poses_initial, save_tracks_initial  # 新增两个导出函数
-from config_paths import load_calibration, C_OUTPUT_DIR  # 取输出目录
+from sparse_reconstruction import (
+    reconstruct_sparse_scene,
+    save_poses_initial,
+    save_tracks_initial,
+    save_observations_only, 
+)
+from config_paths import load_calibration, C_OUTPUT_DIR
 from pathlib import Path
 import numpy as np
+
 
 def main():
 
@@ -33,15 +39,16 @@ def main():
         poses_global=poses_global,
         pairs=pairs,
         summary_rows=rows,
-        angle_thresh_deg=2.0,
+        angle_thresh_deg=2.0,  
     )
 
 
     initial_dir = Path(C_OUTPUT_DIR) / "initial"
     save_poses_initial(poses_global, initial_dir)
     save_tracks_initial(tracks_points, initial_dir)
+    save_observations_only(tracks_points, initial_dir) 
 
-    print("[DONE] Stage 1 complete. Outputs written to result/arch/initial")
+    print(f"[DONE] Stage 1 complete. Outputs written to {initial_dir}")
 
 if __name__ == "__main__":
     main()
