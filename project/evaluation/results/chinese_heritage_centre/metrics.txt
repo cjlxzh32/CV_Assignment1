@@ -1,0 +1,5 @@
+chinese_heritage_centre Overall mean reprojection error: 2.115 px
+chinese_heritage_centre Overall median reprojection error: 0.484 px
+chinese_heritage_centre Overall max reprojection error: 489.152 px
+chinese_heritage_centre Point cloud density: 0.0317 points/unit volume
+chinese_heritage_centre Point Distribution Uniformity: 0.0082

@@ -7,3 +7,9 @@ test/*
 feature_extraction/features/*
 
 .vscode/
+
+build/
+
+project/.DS_Store
+
+project/evaluation/results/.DS_Store

@@ -1,0 +1,5 @@
+pavilion Overall mean reprojection error: 3.267 px
+pavilion Overall median reprojection error: 0.342 px
+pavilion Overall max reprojection error: 187.138 px
+pavilion Point cloud density: 0.4173 points/unit volume
+pavilion Point Distribution Uniformity: 0.1258

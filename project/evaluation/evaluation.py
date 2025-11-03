@@ -1,206 +1,226 @@
-import json
+import json, os
 import numpy as np
-
-# -----------------------------
-# 参数设置
-# -----------------------------
-ba_initial_path = "project/3D_Reconstruction_Pipeline/result/pavilion/ba_problem_export.json"
-ba_refined_path = "project/3D_Reconstruction_Pipeline/result/pavilion/ba_problem_ceres_refined.json"
-
-# -----------------------------
-# 1. 加载数据
-# -----------------------------
-with open(ba_initial_path, 'r') as f:
-    init_data = json.load(f)
-
-with open(ba_refined_path, 'r') as f:
-    refined_data = json.load(f)
-
-K = np.array(refined_data["K"])
-cameras_optimized = refined_data["cameras_optimized"]
-points_optimized = refined_data["points_optimized"]
-observations = init_data["observations"]
-
-# 建立 pt_id -> 3D 点快速索引
-points_dict = {pt['id']: np.array(pt['X']) for pt in points_optimized}
-
-# 建立 cam_id -> 观测点列表快速索引
+from plyfile import PlyData
 from collections import defaultdict
-obs_by_cam = defaultdict(list)
-for obs in observations:
-    obs_by_cam[obs['cam_id']].append(obs)
+import matplotlib.pyplot as plt
+import cv2
 
-# -----------------------------
-# 2. 重投影误差函数
-# -----------------------------
+
 def reprojection_error_batch(X_worlds, uvs_obs, R_w2c, t_w2c, K):
     """
-    批量计算重投影误差
+    Calculate reprojection error by batch
     X_worlds: (N,3)
     uvs_obs: (N,2)
     R_w2c: (3,3)
     t_w2c: (3,)
     K: (3,3)
-    返回: 每个点的重投影误差 (N,)
+    return: reprojection error of each point (N,)
     """
-    X_cam = (R_w2c @ X_worlds.T + t_w2c[:, None]).T  # (N,3)
-    uv_proj_h = (K @ X_cam.T).T                       # (N,3)
+    X_cam = (R_w2c @ X_worlds.T + t_w2c[:, None]).T # (N,3)
+    uv_proj_h = (K @ X_cam.T).T # (N,3)
     uv_proj = uv_proj_h[:, :2] / uv_proj_h[:, 2:3]
     errors = np.linalg.norm(uv_proj - uvs_obs, axis=1)
-    return errors
+    return errors, uv_proj
 
-# -----------------------------
-# 3. 遍历相机计算误差
-# -----------------------------
-all_errors = []
-
-for cam in cameras_optimized:
-    cam_id = cam["id"]
-    R = np.array(cam["R_w2c"])
-    t = np.array(cam["t_w2c"])
+def point_cloud_density(points):
+    # 点云边界盒体积
+    min_pt = points.min(axis=0)
+    max_pt = points.max(axis=0)
+    volume = np.prod(max_pt - min_pt)
     
-    cam_obs = obs_by_cam[cam_id]
-    if len(cam_obs) == 0:
-        continue
-    
-    # 准备批量计算
-    X_worlds = np.array([points_dict[obs['pt_id']] for obs in cam_obs])
-    uvs_obs = np.array([obs['uv'] for obs in cam_obs])
-    
-    errors = reprojection_error_batch(X_worlds, uvs_obs, R, t, K)
-    all_errors.extend(errors)
-    
-    print(f"Camera {cam_id}: {len(errors)} points, mean reprojection error = {errors.mean():.3f} px")
+    density = len(points) / volume  # 点数 / 体积
+    return density
 
-# -----------------------------
-# 4. 全局平均误差
-# -----------------------------
-all_errors = np.array(all_errors)
-print(f"\nOverall mean reprojection error: {all_errors.mean():.3f} px")
-print(f"Overall median reprojection error: {np.median(all_errors):.3f} px")
-print(f"Overall max reprojection error: {all_errors.max():.3f} px")
+def point_distribution_uniformity(points, voxel_size=0.1):
+    # 将点划分到体素
+    voxel_coords = np.floor(points / voxel_size).astype(int)
+    # 每个体素点数
+    unique, counts = np.unique(voxel_coords, axis=0, return_counts=True)
+    variance = np.var(counts)
+    return variance
 
-
-# import json
-# import numpy as np
-# import open3d as o3d
-# import time
-# import pandas as pd
-
-# # -----------------------------
-# # 参数设置
-# # -----------------------------
-# ba_initial_path = "project/3D_Reconstruction_Pipeline/result/pavilion/ba_problem_export.json"
-# ba_refined_path = "project/3D_Reconstruction_Pipeline/result/pavilion/ba_problem_ceres_refined.json"
-# dense_ply_path = "project/3D_Reconstruction_Pipeline/result/pavilion/dense_model/dense.ply"
-# output_csv = "project/evaluation/metrics_summary.csv"
-
-# # -----------------------------
-# # 1. 加载稀疏点云与相机数据
-# # -----------------------------
-# with open(ba_initial_path, 'r') as f:
-#     init_data = json.load(f)
-    
-# with open(ba_refined_path, 'r') as f:
-#     refined_data = json.load(f)
-
-# K = np.array(refined_data["K"]) # 相机内参，只有1个 refined_data["K"]=init_data["K"]
-# cameras_optimized = refined_data["cameras_optimized"] # 优化后的不同相机位姿
-# notes = refined_data["notes"] # 优化后的稀疏重建信息
-# points_optimized = np.array(refined_data["points_optimized"]) # 稀疏点云
-# observations = init_data["observations"] # 3d点投影回2d后对应的点和相机位姿信息
-
-# # -----------------------------
-# # 2. 计算重投影误差
-# # -----------------------------
-# def reprojection_error(X_world, uv_obs, R_w2c, t_w2c, K):
+# def project_points_to_image(points_3d, R, t, K, image):
 #     """
-#     计算单个3D点的重投影误差
-#     参数：
-#     - X_world: np.array, 形状 (3,), 3D点在世界坐标
-#     - uv_obs: np.array, 形状 (2,), 对应观测像素坐标
-#     - R_w2c: np.array, (3,3), 世界到相机旋转矩阵
-#     - t_w2c: np.array, (3,), 世界到相机平移向量
-#     - K: np.array, (3,3), 相机内参矩阵
-#     返回：
-#     - error: float, 像素级重投影误差
+#     将3D点投影到输入图像上
+#     points_3d: (N,3) ndarray
+#     R: (3,3) 相机旋转矩阵
+#     t: (3,) 相机平移向量
+#     K: (3,3) 相机内参
+#     image: 原始图像 ndarray
 #     """
-#     # 世界坐标 -> 相机坐标
-#     X_cam = R_w2c @ X_world + t_w2c  # shape (3,)
-#     # 相机坐标 -> 像素坐标
-#     x_homog = K @ X_cam  # shape (3,)
-#     uv_proj = x_homog[:2] / x_homog[2]  # 齐次坐标归一化
-#     # 计算像素距离（欧氏距离）
-#     error = np.linalg.norm(uv_proj - uv_obs)
-#     return error
+#     img_proj = image.copy()
+#     h, w = img_proj.shape[:2]
 
-# reproj_errors = []
-# for i, cam in enumerate(cameras_optimized):
-#     R = np.array(cam["R_w2c"])
-#     t = np.array(cam["t_w2c"])
-#     cam_id = cam["id"]
-#     # 找到该相机位姿下的所有2d点
-#     cam_observations = [obs for obs in observations if obs["cam_id"] == cam_id]
-#     print(f"{len(cam_observations)} points_2d in camera {cam_id}")
-#     for j, init_point in enumerate(cam_observations):
-#         pt_id = init_point["pt_id"]
-#         pt_2d = init_point["uv"]
-#         pts_3d = [pt for pt in points_optimized if pt["id"] == pt_id]
-#         pt_3d = np.array(pts_3d[0]['X'])
-#         reproj_error = reprojection_error(pt_3d, pt_2d, R, t, K)
-#         reproj_errors.append(reproj_error)
-#         print(f"camera_id: {i}, point_id: {j}, re: {reproj_error}")
+#     for P_world in points_3d:
+#         # 世界坐标 -> 相机坐标
+#         P_cam = R @ P_world + t
+#         if P_cam[2] <= 0:
+#             continue  # 点在相机背面
+
+#         # 相机坐标 -> 像素坐标
+#         p = K @ (P_cam / P_cam[2])
+#         u, v = int(round(p[0])), int(round(p[1]))
+
+#         # 判断是否在图像内
+#         if 0 <= u < w and 0 <= v < h:
+#             cv2.circle(img_proj, (u, v), radius=5, color=(0,0,255), thickness=-1)
+
+#     return img_proj
+
+def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
+    """
+    将3D点投影到输入图像上，并过滤异常点
+    points_3d: (N,3) ndarray
+    R: (3,3) 相机旋转矩阵
+    t: (3,) 相机平移向量
+    K: (3,3) 相机内参
+    image: 原始图像 ndarray
+    z_min, z_max: 深度范围，过滤掉离相机太近或太远的点
+    """
+    img_proj = image.copy()
+    h, w = img_proj.shape[:2]
+
+    for P_world in points_3d:
+        # 世界坐标 -> 相机坐标
+        P_cam = R @ P_world + t
+
+        # 过滤在相机背面的点和异常深度
+        # if P_cam[2] <= z_min or P_cam[2] > z_max:
+        #     continue
+        if P_cam[2] <= z_min:
+            continue
+
+        # 相机坐标 -> 像素坐标
+        p = K @ (P_cam / P_cam[2])
+        u, v = int(round(p[0])), int(round(p[1]))
+
+        # 判断是否在图像内
+        if 0 <= u < w and 0 <= v < h:
+            cv2.circle(img_proj, (u, v), radius=5, color=(0,0,255), thickness=-1)
+
+    return img_proj
+
+
+scenes = ["arch", "chinese_heritage_centre", "pavilion"]
+for scene in scenes:
+    ba_initial_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_export.json"
+    ba_refined_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_ceres_refined_A.json"
+    sparse_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/initial/sparse_points_initial.ply"
+    os.makedirs(f'project/evaluation/results/{scene}', exist_ok=True)
+    # -----------------------------
+    # 1. Load data
+    # -----------------------------
+    with open(ba_initial_path, 'r') as f:
+        init_data = json.load(f)
+
+    with open(ba_refined_path, 'r') as f:
+        refined_data = json.load(f)
+
+    K = np.array(refined_data["K"])
+    cameras_optimized = refined_data["cameras_optimized"]
+    points_optimized = refined_data["points_optimized"] # 16647
+    cameras_init = init_data["cameras"]
+    observations = init_data["observations"]
+
+    # construct pt_id -> 3D point dictionary
+    points_dict = {pt['id']: np.array(pt['X']) for pt in points_optimized}
+
+    # construct cam_id -> observation list dictionary
+    obs_by_cam = defaultdict(list)
+    for obs in observations:
+        obs_by_cam[obs['cam_id']].append(obs)
+        
+    # construct cam_id -> frame dictionary
+    frame_by_cam = {}
+    for cam in cameras_init:
+        frame_by_cam[cam["id"]] = cam["name"]
+
+    # -----------------------------
+    # 2. Calculate reprojection error by batch
+    # -----------------------------
+    all_errors = []
+    max_cam_id = -1
+    max_num_ponts = 0
+    max_cam_index = -1
+    for i, cam in enumerate(cameras_optimized):
+        cam_id = cam["id"]
+        R = np.array(cam["R_w2c"])
+        t = np.array(cam["t_w2c"])
+        # frame_path = f"project/scenes/images/{scene}/{frame_by_cam[cam_id]}.jpg"
+        
+        cam_obs = obs_by_cam[cam_id]
+        if len(cam_obs) == 0:
+            continue
+        
+        # prepare for calculation by batch
+        X_worlds = np.array([points_dict[obs['pt_id']] for obs in cam_obs]) # 3D point
+        if len(X_worlds) > max_num_ponts:
+            max_num_ponts = len(X_worlds)
+            max_cam_id = cam_id
+            max_cam_index = i
+        uvs_obs = np.array([obs['uv'] for obs in cam_obs]) # 2D point
+        
+        errors, uv_proj = reprojection_error_batch(X_worlds, uvs_obs, R, t, K)
+        all_errors.extend(errors)
+        
+        # print(f"Camera {cam_id}: {len(errors)} points, mean reprojection error = {errors.mean():.3f} px")
     
+    # read original image with the most 3D points
+    R_max = np.array(cameras_optimized[max_cam_index]["R_w2c"])
+    t_max = np.array(cameras_optimized[max_cam_index]["t_w2c"])
+    frame_path = f"project/scenes/images/{scene}/{frame_by_cam[max_cam_id]}.jpg"
+    img = cv2.imread(frame_path)
+    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    points_3d = [np.array(point['X']) for point in points_optimized]
+    img_proj = project_points_to_image(points_3d, R_max, t_max, K, img_rgb)
+    cv2.imwrite(f'project/evaluation/results/{scene}/reprojection_error_heatmap_{frame_by_cam[max_cam_id]}.png', 
+            cv2.cvtColor(img_proj, cv2.COLOR_RGB2BGR))
 
-# reproj_error_mean = np.mean(reproj_errors)
-# print("Mean Reprojection Error (px):", reproj_error_mean)
+    # -----------------------------
+    # 3. Calculate points density and point distribution uniformity
+    # -----------------------------
+    points = np.vstack([PlyData.read(sparse_points_path)['vertex'][axis] for axis in ['x','y','z']]).T # 23109
+    density = point_cloud_density(points)
+    distribution_uniformity = point_distribution_uniformity(points)
 
-# -----------------------------
-# 3. 点云统计信息
-# -----------------------------
-# def pointcloud_stats(points):
-#     N = points.shape[0]
-#     min_bound = points.min(axis=0)
-#     max_bound = points.max(axis=0)
-#     volume = np.prod(max_bound - min_bound)
-#     density = N / volume
-#     return N, volume, density
+    # -----------------------------
+    # 4. Calculate total mean error and plot figure
+    # -----------------------------
+    all_errors = np.array(all_errors)
+    # plt.hist(all_errors, bins=50, color='skyblue', edgecolor='black')
+    # plot histogram
+    plt.figure(figsize=(8,5))
+    plt.hist(all_errors, bins=100, color='skyblue', edgecolor='black')
+    plt.title('Reprojection Error Distribution')
+    plt.xlabel('Reprojection Error (pixels)')
+    plt.ylabel('Number of Points')
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.pdf', dpi=300, bbox_inches='tight')
+    plt.close()
+    
+    output_file = f'project/evaluation/results/{scene}/metrics.txt'
+    with open(output_file, 'w') as f:
+        # write mean
+        mean_str = f"{scene} Overall mean reprojection error: {all_errors.mean():.3f} px\n"
+        print(mean_str, end='')
+        f.write(mean_str)
 
-# # 稀疏点云
-# sparse_N, sparse_vol, sparse_density = pointcloud_stats(points_sparse)
+        # write median
+        median_str = f"{scene} Overall median reprojection error: {np.median(all_errors):.3f} px\n"
+        print(median_str, end='')
+        f.write(median_str)
 
-# # 稠密点云
-# pcd_dense = o3d.io.read_point_cloud(dense_ply_path)
-# points_dense = np.asarray(pcd_dense.points)
-# dense_N, dense_vol, dense_density = pointcloud_stats(points_dense)
+        # write max
+        max_str = f"{scene} Overall max reprojection error: {all_errors.max():.3f} px\n"
+        print(max_str, end='')
+        f.write(max_str)
+        
+        # write point cloud density
+        mean_str = f"{scene} Point cloud density: {density:.4f} points/unit volume\n"
+        print(mean_str, end='')
+        f.write(mean_str)
 
-# print(f"Sparse: {sparse_N} points, volume={sparse_vol:.2f}, density={sparse_density:.2f}")
-# print(f"Dense: {dense_N} points, volume={dense_vol:.2f}, density={dense_density:.2f}")
-
-# # -----------------------------
-# # 4. 执行时间（手动输入或记录）
-# # -----------------------------
-# # 这里可根据日志或计时记录每个阶段耗时
-# runtime_dict = {
-#     "sparse_reconstruction_sec": 120,  # 示例
-#     "BA_optimization_sec": 300,
-#     "dense_reconstruction_sec": 600
-# }
-
-# # -----------------------------
-# # 5. 保存结果表格
-# # -----------------------------
-# metrics = {
-#     "Metric": ["ReprojectionError(px)", "SparsePoints", "SparseVolume", "SparseDensity",
-#                "DensePoints", "DenseVolume", "DenseDensity",
-#                "SparseRuntime(s)", "BA_Runtime(s)", "DenseRuntime(s)"],
-#     "Value": [reproj_error_mean, sparse_N, sparse_vol, sparse_density,
-#               dense_N, dense_vol, dense_density,
-#               runtime_dict["sparse_reconstruction_sec"],
-#               runtime_dict["BA_optimization_sec"],
-#               runtime_dict["dense_reconstruction_sec"]]
-# }
-
-# df = pd.DataFrame(metrics)
-# df.to_csv(output_csv, index=False)
-# print(f"Metrics saved to {output_csv}")
+        # write point distribution uniformity
+        median_str = f"{scene} Point Distribution Uniformity: {distribution_uniformity:.4f}\n"
+        print(median_str, end='')
+        f.write(median_str)
