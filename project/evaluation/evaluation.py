@@ -104,7 +104,7 @@ def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
 scenes = ["arch", "chinese_heritage_centre", "pavilion"]
 for scene in scenes:
     ba_initial_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_export.json"
-    ba_refined_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_ceres_refined_A.json"
+    ba_refined_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_ceres_refined.json"
     sparse_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/initial/sparse_points_initial.ply"
     os.makedirs(f'project/evaluation/results/{scene}', exist_ok=True)
     # -----------------------------
