@@ -196,6 +196,7 @@ for scene in scenes:
     plt.ylabel('Number of Points')
     plt.grid(True, linestyle='--', alpha=0.5)
     plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.png', dpi=300, bbox_inches='tight')
     plt.close()
     
     output_file = f'project/evaluation/results/{scene}/metrics.txt'
