@@ -20,6 +20,7 @@ def point_cloud_density(points):
 ```
 
 **问题：**
+
 - 如果坐标是毫米：体积 = 588,510,400 → 密度看起来很低 (0.0003)
 - 如果坐标是厘米：体积 = 14,911,562 → 密度看起来很低 (0.0200)
 - **没有考虑单位系统，导致密度值无法正确评估**
@@ -65,6 +66,7 @@ def point_cloud_density(points, auto_detect_units=True):
 ```
 
 **修复：**
+
 - ✅ 自动检测坐标单位（毫米/厘米/米）
 - ✅ 统一转换为米³计算
 - ✅ 返回标准化的密度值，可直接与"1-50点/立方米"标准比较
@@ -133,4 +135,3 @@ cp project/evaluation/evaluation_fixed.py project/evaluation/evaluation.py
 ## 结论
 
 修复后的版本正确计算了稠密点云密度，发现**所有场景都远超标准（1-50点/立方米）**，证明重建质量很好，无需重拍照片。
-

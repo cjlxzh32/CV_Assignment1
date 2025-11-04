@@ -89,13 +89,13 @@ def point_distribution_uniformity(points, voxel_size=0.1):
 
 def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
     """
-    将3D点投影到输入图像上，并过滤异常点
+    project 3D points to the input image and filter the abnormal points
     points_3d: (N,3) ndarray
-    R: (3,3) 相机旋转矩阵
-    t: (3,) 相机平移向量
-    K: (3,3) 相机内参
-    image: 原始图像 ndarray
-    z_min, z_max: 深度范围，过滤掉离相机太近或太远的点
+    R: (3,3) camera rotation matrix
+    t: (3,) camera translation matrix
+    K: (3,3) camera intrinsic parameters
+    image: original image ndarray
+    z_min, z_max: depth range
     """
     img_proj = image.copy()
     h, w = img_proj.shape[:2]
@@ -105,7 +105,7 @@ def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
         P_cam = R @ P_world + t
 
         # 过滤在相机背面的点和异常深度
-        if P_cam[2] <= z_min:
+        if P_cam[2] <= z_min or P_cam[2] >= z_max:
             continue
 
         # 相机坐标 -> 像素坐标
@@ -119,16 +119,16 @@ def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
     return img_proj
 
 
-scenes = ["arch", "chinese_heritage_centre", "pavilion"]
+# scenes = ["arch", "chinese_heritage_centre", "pavilion"]
+scenes = ["arch", "chinese_heritage_centre"]
 for scene in scenes:
-    ba_initial_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_export.json"
-    ba_refined_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_ceres_refined.json"
-    sparse_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/initial/sparse_points_initial.ply"
+    ba_initial_path = f"project/3D_Reconstruction_Pipeline/new_result/{scene}/non_sequential/ba_problem_export.json"
+    ba_refined_path = f"project/3D_Reconstruction_Pipeline/new_result/{scene}/non_sequential/ba_problem_ceres_refined.json"
+    sparse_points_path = f"project/3D_Reconstruction_Pipeline/new_result/{scene}/non_sequential/initial/sparse_points_initial.ply"
     sparse_points3d_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/colmap_model_refined/points3D.txt"
     dense_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/dense_model/dense.ply"
-    
-    os.makedirs(f'project/evaluation/results/{scene}', exist_ok=True)
-    
+    save_dir = f'project/evaluation/new_results_test/{scene}'
+    os.makedirs(save_dir, exist_ok=True)
     # -----------------------------
     # 1. Load data
     # -----------------------------
@@ -195,7 +195,7 @@ for scene in scenes:
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         points_3d = [np.array(point['X']) for point in points_optimized]
         img_proj = project_points_to_image(points_3d, R_max, t_max, K, img_rgb)
-        cv2.imwrite(f'project/evaluation/results/{scene}/reprojection_error_heatmap_{frame_by_cam[max_cam_id]}.png', 
+        cv2.imwrite(f'{save_dir}/reprojection_error_heatmap_{frame_by_cam[max_cam_id]}.png', 
                 cv2.cvtColor(img_proj, cv2.COLOR_RGB2BGR))
 
     # -----------------------------
@@ -272,11 +272,11 @@ for scene in scenes:
     plt.xlabel('Reprojection Error (pixels)')
     plt.ylabel('Number of Points')
     plt.grid(True, linestyle='--', alpha=0.5)
-    plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/reprojection_error_hist.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/reprojection_error_hist.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    output_file = f'project/evaluation/results/{scene}/metrics.txt'
+    output_file = f'{save_dir}/metrics.txt'
     with open(output_file, 'w') as f:
         # Reprojection errors
         mean_str = f"{scene} Overall mean reprojection error: {all_errors.mean():.3f} px\n"

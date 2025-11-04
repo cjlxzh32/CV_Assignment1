@@ -1,8 +1,5 @@
-chinese_heritage_centre Overall mean reprojection error: 2.115 px
-chinese_heritage_centre Overall median reprojection error: 0.484 px
-chinese_heritage_centre Overall max reprojection error: 489.152 px
-chinese_heritage_centre Sparse point cloud density: 0.0377 points/m³ (coordinate unit: meters)
-  ⚠️  Sparse point cloud below standard (<1 points/m³) - may need more images or better feature matching
-chinese_heritage_centre Dense point cloud density: 19990.12 points/m³ (coordinate unit: centimeters)
-  ✅ Dense point cloud EXCEEDS standard (very dense!)
-chinese_heritage_centre Point Distribution Uniformity: 0.0061
+chinese_heritage_centre Overall mean reprojection error: 8.699 px
+chinese_heritage_centre Overall median reprojection error: 0.536 px
+chinese_heritage_centre Overall max reprojection error: 1340.321 px
+chinese_heritage_centre Point cloud density: 4.5575 points/unit volume
+chinese_heritage_centre Point Distribution Uniformity: 0.2085

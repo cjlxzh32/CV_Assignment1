@@ -23,7 +23,11 @@ def reprojection_error_batch(X_worlds, uvs_obs, R_w2c, t_w2c, K):
     return errors, uv_proj
 
 def point_cloud_density(points):
-    # 点云边界盒体积
+    """
+    Calculate 3D point cloud density
+    points: (N,3)
+    return: density of the point cloud
+    """
     min_pt = points.min(axis=0)
     max_pt = points.max(axis=0)
     volume = np.prod(max_pt - min_pt)
@@ -32,69 +36,33 @@ def point_cloud_density(points):
     return density
 
 def point_distribution_uniformity(points, voxel_size=0.1):
-    # 将点划分到体素
     voxel_coords = np.floor(points / voxel_size).astype(int)
-    # 每个体素点数
     unique, counts = np.unique(voxel_coords, axis=0, return_counts=True)
     variance = np.var(counts)
     return variance
 
-# def project_points_to_image(points_3d, R, t, K, image):
-#     """
-#     将3D点投影到输入图像上
-#     points_3d: (N,3) ndarray
-#     R: (3,3) 相机旋转矩阵
-#     t: (3,) 相机平移向量
-#     K: (3,3) 相机内参
-#     image: 原始图像 ndarray
-#     """
-#     img_proj = image.copy()
-#     h, w = img_proj.shape[:2]
-
-#     for P_world in points_3d:
-#         # 世界坐标 -> 相机坐标
-#         P_cam = R @ P_world + t
-#         if P_cam[2] <= 0:
-#             continue  # 点在相机背面
-
-#         # 相机坐标 -> 像素坐标
-#         p = K @ (P_cam / P_cam[2])
-#         u, v = int(round(p[0])), int(round(p[1]))
-
-#         # 判断是否在图像内
-#         if 0 <= u < w and 0 <= v < h:
-#             cv2.circle(img_proj, (u, v), radius=5, color=(0,0,255), thickness=-1)
-
-#     return img_proj
-
 def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
     """
-    将3D点投影到输入图像上，并过滤异常点
+    project 3D points to the input image and filter the abnormal points
     points_3d: (N,3) ndarray
-    R: (3,3) 相机旋转矩阵
-    t: (3,) 相机平移向量
-    K: (3,3) 相机内参
-    image: 原始图像 ndarray
-    z_min, z_max: 深度范围，过滤掉离相机太近或太远的点
+    R: (3,3) camera rotation matrix
+    t: (3,) camera translation matrix
+    K: (3,3) camera intrinsic parameters
+    image: original image ndarray
+    z_min, z_max: depth range
     """
     img_proj = image.copy()
     h, w = img_proj.shape[:2]
 
     for P_world in points_3d:
-        # 世界坐标 -> 相机坐标
         P_cam = R @ P_world + t
 
-        # 过滤在相机背面的点和异常深度
-        # if P_cam[2] <= z_min or P_cam[2] > z_max:
-        #     continue
-        if P_cam[2] <= z_min:
+        if P_cam[2] <= z_min or P_cam[2] >= z_max:
             continue
 
-        # 相机坐标 -> 像素坐标
         p = K @ (P_cam / P_cam[2])
         u, v = int(round(p[0])), int(round(p[1]))
 
-        # 判断是否在图像内
         if 0 <= u < w and 0 <= v < h:
             cv2.circle(img_proj, (u, v), radius=5, color=(0,0,255), thickness=-1)
 
@@ -103,10 +71,11 @@ def project_points_to_image(points_3d, R, t, K, image, z_min=0.1, z_max=100):
 
 scenes = ["arch", "chinese_heritage_centre", "pavilion"]
 for scene in scenes:
-    ba_initial_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_export.json"
-    ba_refined_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_ceres_refined.json"
-    sparse_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/initial/sparse_points_initial.ply"
-    os.makedirs(f'project/evaluation/results/{scene}', exist_ok=True)
+    ba_initial_path = f"project/3D_Reconstruction_Pipeline/new_result/{scene}/non_sequential/ba_problem_export.json"
+    ba_refined_path = f"project/3D_Reconstruction_Pipeline/new_result/{scene}/non_sequential/ba_problem_ceres_refined.json"
+    sparse_points_path = f"project/3D_Reconstruction_Pipeline/new_result/{scene}/non_sequential/initial/sparse_points_initial.ply"
+    save_dir = f'project/evaluation/new_results_test/{scene}'
+    os.makedirs(save_dir, exist_ok=True)
     # -----------------------------
     # 1. Load data
     # -----------------------------
@@ -146,7 +115,6 @@ for scene in scenes:
         cam_id = cam["id"]
         R = np.array(cam["R_w2c"])
         t = np.array(cam["t_w2c"])
-        # frame_path = f"project/scenes/images/{scene}/{frame_by_cam[cam_id]}.jpg"
         
         cam_obs = obs_by_cam[cam_id]
         if len(cam_obs) == 0:
@@ -162,7 +130,6 @@ for scene in scenes:
         
         errors, uv_proj = reprojection_error_batch(X_worlds, uvs_obs, R, t, K)
         all_errors.extend(errors)
-        
         # print(f"Camera {cam_id}: {len(errors)} points, mean reprojection error = {errors.mean():.3f} px")
     
     # read original image with the most 3D points
@@ -173,7 +140,7 @@ for scene in scenes:
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     points_3d = [np.array(point['X']) for point in points_optimized]
     img_proj = project_points_to_image(points_3d, R_max, t_max, K, img_rgb)
-    cv2.imwrite(f'project/evaluation/results/{scene}/reprojection_error_heatmap_{frame_by_cam[max_cam_id]}.png', 
+    cv2.imwrite(f'{save_dir}/reprojection_error_heatmap_{frame_by_cam[max_cam_id]}.png', 
             cv2.cvtColor(img_proj, cv2.COLOR_RGB2BGR))
 
     # -----------------------------
@@ -187,7 +154,6 @@ for scene in scenes:
     # 4. Calculate total mean error and plot figure
     # -----------------------------
     all_errors = np.array(all_errors)
-    # plt.hist(all_errors, bins=50, color='skyblue', edgecolor='black')
     # plot histogram
     plt.figure(figsize=(8,5))
     plt.hist(all_errors, bins=100, color='skyblue', edgecolor='black')
@@ -195,11 +161,11 @@ for scene in scenes:
     plt.xlabel('Reprojection Error (pixels)')
     plt.ylabel('Number of Points')
     plt.grid(True, linestyle='--', alpha=0.5)
-    plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.pdf', dpi=300, bbox_inches='tight')
-    plt.savefig(f'project/evaluation/results/{scene}/reprojection_error_hist.png', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/reprojection_error_hist.pdf', dpi=300, bbox_inches='tight')
+    plt.savefig(f'{save_dir}/reprojection_error_hist.png', dpi=300, bbox_inches='tight')
     plt.close()
     
-    output_file = f'project/evaluation/results/{scene}/metrics.txt'
+    output_file = f'{save_dir}/metrics.txt'
     with open(output_file, 'w') as f:
         # write mean
         mean_str = f"{scene} Overall mean reprojection error: {all_errors.mean():.3f} px\n"

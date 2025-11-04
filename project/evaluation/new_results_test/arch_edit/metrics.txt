@@ -1,0 +1,5 @@
+arch_edit Overall mean reprojection error: 10.039 px
+arch_edit Overall median reprojection error: 0.640 px
+arch_edit Overall max reprojection error: 942.292 px
+arch_edit Point cloud density: 0.3588 points/unit volume
+arch_edit Point Distribution Uniformity: 0.3408
