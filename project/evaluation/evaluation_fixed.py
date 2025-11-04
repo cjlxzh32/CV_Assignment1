@@ -124,6 +124,7 @@ for scene in scenes:
     ba_initial_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_export.json"
     ba_refined_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/ba_problem_ceres_refined.json"
     sparse_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/initial/sparse_points_initial.ply"
+    sparse_points3d_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/colmap_model_refined/points3D.txt"
     dense_points_path = f"project/3D_Reconstruction_Pipeline/result/{scene}/dense_model/dense.ply"
     
     os.makedirs(f'project/evaluation/results/{scene}', exist_ok=True)
@@ -200,15 +201,42 @@ for scene in scenes:
     # -----------------------------
     # 3. Calculate points density and point distribution uniformity
     # -----------------------------
-    # Sparse point cloud (for reference - low density is normal)
+    # Sparse point cloud - use BA optimized version (points3D.txt) if available, otherwise use initial
     sparse_density = None
     sparse_info = None
-    if os.path.exists(sparse_points_path):
+    sparse_points = None
+    
+    # Try to load from BA optimized points3D.txt first (this is the correct sparse point cloud)
+    if os.path.exists(sparse_points3d_path):
+        try:
+            # Read COLMAP points3D.txt format: POINT3D_ID, X, Y, Z, R, G, B, ERROR, TRACK[]
+            points_list = []
+            with open(sparse_points3d_path, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            try:
+                                x, y, z = float(parts[1]), float(parts[2]), float(parts[3])
+                                points_list.append([x, y, z])
+                            except (ValueError, IndexError):
+                                continue
+            if points_list:
+                sparse_points = np.array(points_list)
+                sparse_density, sparse_info = point_cloud_density(sparse_points)
+                print(f"✅ Loaded sparse point cloud from BA optimized points3D.txt: {len(sparse_points)} points")
+        except Exception as e:
+            print(f"Warning: Could not read points3D.txt: {e}")
+    
+    # Fallback to initial sparse point cloud if points3D.txt not available
+    if sparse_points is None and os.path.exists(sparse_points_path):
         try:
             sparse_ply = PlyData.read(sparse_points_path)
             sparse_vertex = sparse_ply['vertex']
             sparse_points = np.column_stack([sparse_vertex['x'], sparse_vertex['y'], sparse_vertex['z']])
             sparse_density, sparse_info = point_cloud_density(sparse_points)
+            print(f"⚠️  Using initial sparse point cloud (not BA optimized): {len(sparse_points)} points")
         except Exception as e:
             print(f"Warning: Could not analyze sparse point cloud: {e}")
     
@@ -224,12 +252,9 @@ for scene in scenes:
         except Exception as e:
             print(f"Warning: Could not analyze dense point cloud: {e}")
     
-    # Distribution uniformity (using sparse for consistency with original)
-    if os.path.exists(sparse_points_path):
+    # Distribution uniformity (using sparse point cloud)
+    if sparse_points is not None:
         try:
-            sparse_ply = PlyData.read(sparse_points_path)
-            sparse_vertex = sparse_ply['vertex']
-            sparse_points = np.column_stack([sparse_vertex['x'], sparse_vertex['y'], sparse_vertex['z']])
             distribution_uniformity = point_distribution_uniformity(sparse_points)
         except:
             distribution_uniformity = 0.0
@@ -266,12 +291,19 @@ for scene in scenes:
         print(max_str, end='')
         f.write(max_str)
         
-        # Sparse point cloud density (for reference)
+        # Sparse point cloud density (BA optimized - this is what matters for standard 1-50 points/m³)
         if sparse_density is not None:
             sparse_str = f"{scene} Sparse point cloud density: {sparse_density:.4f} points/m³ (coordinate unit: {sparse_info['unit']})\n"
             print(sparse_str, end='')
             f.write(sparse_str)
-            f.write(f"  Note: Low sparse density is normal - used for pose estimation, not final model\n")
+            
+            # Assessment against standard (1-50 points/m³)
+            if 1 <= sparse_density <= 50:
+                f.write(f"  ✅ Sparse point cloud meets standard (1-50 points/m³)\n")
+            elif sparse_density > 50:
+                f.write(f"  ✅ Sparse point cloud EXCEEDS standard (very dense!)\n")
+            else:
+                f.write(f"  ⚠️  Sparse point cloud below standard (<1 points/m³) - may need more images or better feature matching\n")
         
         # Dense point cloud density (this is what matters!)
         if dense_density is not None:
