@@ -4,6 +4,8 @@
 
 test/*
 
+# Feature extraction results - large binary files (can be regenerated)
+project/feature_extraction/features/
 feature_extraction/features/*
 
 .vscode/
@@ -13,3 +15,7 @@ build/
 project/.DS_Store
 
 project/evaluation/results/.DS_Store
+
+# 3D Reconstruction results - large binary files (can be regenerated)
+project/3D_Reconstruction_Pipeline/result/**/*.ply
+project/3D_Reconstruction_Pipeline/result/**/*.bin
