@@ -1,0 +1,26 @@
+scene,pair,num_matches,inlier_count,inlier_ratio,reproj_rmse,status
+arch,frame_001-frame_006 (non-sequential),1415,729,0.515,0.261,OK
+arch,frame_006-frame_011 (non-sequential),438,179,0.409,22.617,OK
+arch,frame_011-frame_016 (non-sequential),286,110,0.385,3.288,OK
+arch,frame_016-frame_021 (non-sequential),361,161,0.446,11.168,OK
+arch,frame_021-frame_026 (non-sequential),241,91,0.378,0.632,OK
+arch,frame_026-frame_031 (non-sequential),207,101,0.488,1.186,OK
+arch,frame_031-frame_036 (non-sequential),243,92,0.379,0.697,OK
+arch,frame_036-frame_041 (non-sequential),303,124,0.409,9.82,OK
+arch,frame_041-frame_046 (non-sequential),251,117,0.466,0.487,OK
+arch,frame_046-frame_051 (non-sequential),246,125,0.508,3.317,OK
+arch,frame_051-frame_056 (non-sequential),315,141,0.448,0.551,OK
+arch,frame_056-frame_061 (non-sequential),304,119,0.391,4.444,OK
+arch,frame_061-frame_066 (non-sequential),287,143,0.498,4.782,OK
+arch,frame_066-frame_071 (non-sequential),425,196,0.461,11.435,OK
+arch,frame_071-frame_076 (non-sequential),279,126,0.452,6.076,OK
+arch,frame_076-frame_081 (non-sequential),302,132,0.437,8.545,OK
+arch,frame_081-frame_086 (non-sequential),411,159,0.387,16.568,OK
+arch,frame_086-frame_091 (non-sequential),945,367,0.388,15.498,OK
+arch,frame_091-frame_096 (non-sequential),673,294,0.437,4.496,OK
+arch,frame_096-frame_101 (non-sequential),394,147,0.373,59.766,OK
+arch,frame_101-frame_106 (non-sequential),399,188,0.471,11.312,OK
+arch,frame_106-frame_111 (non-sequential),231,108,0.468,2.126,OK
+arch,frame_111-frame_116 (non-sequential),405,185,0.457,2.95,OK
+arch,frame_116-frame_121 (non-sequential),216,77,0.356,1.551,OK
+arch,frame_121-frame_126 (non-sequential),394,193,0.49,1.172,OK

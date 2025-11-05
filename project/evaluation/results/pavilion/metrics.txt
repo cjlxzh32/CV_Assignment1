@@ -1,0 +1,8 @@
+pavilion Overall mean reprojection error: 3.267 px
+pavilion Overall median reprojection error: 0.342 px
+pavilion Overall max reprojection error: 187.138 px
+pavilion Sparse point cloud density: 0.2938 points/m³ (coordinate unit: meters)
+  ⚠️  Sparse point cloud below standard (<1 points/m³) - may need more images or better feature matching
+pavilion Dense point cloud density: 4621.85 points/m³ (coordinate unit: centimeters)
+  ✅ Dense point cloud EXCEEDS standard (very dense!)
+pavilion Point Distribution Uniformity: 0.0550

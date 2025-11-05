@@ -1,0 +1,8 @@
+arch Overall mean reprojection error: 9.069 px
+arch Overall median reprojection error: 0.650 px
+arch Overall max reprojection error: 533.816 px
+arch Sparse point cloud density: 0.1777 points/m³ (coordinate unit: meters)
+  ⚠️  Sparse point cloud below standard (<1 points/m³) - may need more images or better feature matching
+arch Dense point cloud density: 324585.60 points/m³ (coordinate unit: millimeters)
+  ✅ Dense point cloud EXCEEDS standard (very dense!)
+arch Point Distribution Uniformity: 0.0408
